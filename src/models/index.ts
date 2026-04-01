@@ -30,6 +30,7 @@ const RecurringStatusSchema = new mongoose.Schema({
   userId: { type: String, required: true, index: true },
   monthYear: { type: String, required: true },
   paid: { type: Boolean, required: true },
+  amount: { type: Number },
 });
 
 export const RecurringStatusModel = mongoose.models.RecurringStatus || mongoose.model('RecurringStatus', RecurringStatusSchema);

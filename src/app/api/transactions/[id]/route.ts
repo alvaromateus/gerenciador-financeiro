@@ -12,13 +12,20 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const data = await req.json();
     await connectToDatabase();
 
+    const existing = await TransactionModel.findOne({ id, userId: user.userId });
+    if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+    // Freeze past paid amounts if they don't have one
+    await RecurringStatusModel.updateMany(
+      { transactionId: id, userId: user.userId, paid: true, amount: { $exists: false } },
+      { $set: { amount: existing.amount } }
+    );
+
     const updated = await TransactionModel.findOneAndUpdate(
       { id, userId: user.userId },
       { $set: data },
       { new: true }
     ).lean();
-
-    if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     const { _id, __v, ...cleanTransaction } = updated;
     return NextResponse.json(cleanTransaction);

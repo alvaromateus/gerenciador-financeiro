@@ -205,7 +205,8 @@ export default function TransactionList() {
                     transaction.originalId, 
                     currentMonthYear, 
                     transaction.type === 'recurring' || transaction.type === 'fixed',
-                    transaction.isPaidInCurrentMonth
+                    transaction.isPaidInCurrentMonth,
+                    transaction.amount
                   )}
                   className="flex-shrink-0 focus:outline-none"
                 >

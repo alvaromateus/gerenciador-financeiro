@@ -72,4 +72,5 @@ export interface RecurringPaymentStatus {
   userId: string;
   monthYear: string; // YYYY-MM format
   paid: boolean;
+  amount?: number;
 }

@@ -18,7 +18,7 @@ interface FinanceContextProps {
   investmentTransactions: InvestmentTransaction[];
   addTransaction: (transaction: Omit<Transaction, 'id' | 'userId'>) => Promise<void>;
   updateTransaction: (id: string, transaction: Omit<Transaction, 'id' | 'userId'>) => Promise<void>;
-  toggleTransactionStatus: (transactionId: string, monthYear: string, isRecurring: boolean, currentPaidState: boolean) => Promise<void>;
+  toggleTransactionStatus: (transactionId: string, monthYear: string, isRecurring: boolean, currentPaidState: boolean, amount?: number) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
   nextMonth: () => void;
   prevMonth: () => void;
@@ -159,11 +159,11 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const toggleTransactionStatus = async (transactionId: string, monthYear: string, isRecurring: boolean, currentPaidState: boolean) => {
+  const toggleTransactionStatus = async (transactionId: string, monthYear: string, isRecurring: boolean, currentPaidState: boolean, amount?: number) => {
     const res = await fetch('/api/transactions/status', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ transactionId, monthYear, paid: !currentPaidState, isRecurring })
+      body: JSON.stringify({ transactionId, monthYear, paid: !currentPaidState, isRecurring, amount })
     });
 
     if (res.ok) {
@@ -171,9 +171,9 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
         setRecurringStatuses((prev) => {
           const existing = prev.find(s => s.transactionId === transactionId && s.monthYear === monthYear);
           if (existing) {
-            return prev.map(s => s.transactionId === transactionId && s.monthYear === monthYear ? { ...s, paid: !currentPaidState } : s);
+            return prev.map(s => s.transactionId === transactionId && s.monthYear === monthYear ? { ...s, paid: !currentPaidState, amount: amount !== undefined ? amount : s.amount } : s);
           } else {
-            return [...prev, { transactionId, userId: user!.id, monthYear, paid: !currentPaidState }];
+            return [...prev, { transactionId, userId: user!.id, monthYear, paid: !currentPaidState, amount }];
           }
         });
       } else {
@@ -236,6 +236,7 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
           );
           
           const isPaid = monthStatus ? monthStatus.paid : false;
+          const occurrenceAmount = monthStatus?.amount !== undefined ? monthStatus.amount : transaction.amount;
           
           // Occurrence date should be the day of the start date, but in the current viewed month
           const occurrenceDay = startDate.getDate();
@@ -243,6 +244,7 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
           
           occurrences.push({
             ...transaction,
+            amount: occurrenceAmount,
             originalId: transaction.id,
             occurrenceDate: occurrenceDateStr,
             isPaidInCurrentMonth: isPaid,
@@ -255,6 +257,7 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
         );
         
         const isPaid = monthStatus ? monthStatus.paid : false;
+        const occurrenceAmount = monthStatus?.amount !== undefined ? monthStatus.amount : transaction.amount;
         
         // Hide fixed transactions in past months if they weren't paid
         if (currentMonthYear < realCurrentMonthYear && !isPaid) {
@@ -265,6 +268,7 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
         
         occurrences.push({
           ...transaction,
+          amount: occurrenceAmount,
           originalId: transaction.id,
           occurrenceDate: occurrenceDateStr,
           isPaidInCurrentMonth: isPaid,

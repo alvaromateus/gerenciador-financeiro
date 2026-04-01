@@ -8,13 +8,16 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
-    const { transactionId, monthYear, paid, isRecurring } = await req.json();
+    const { transactionId, monthYear, paid, isRecurring, amount } = await req.json();
     await connectToDatabase();
 
     if (isRecurring) {
+      const updateData: any = { paid };
+      if (amount !== undefined) updateData.amount = amount;
+
       await RecurringStatusModel.findOneAndUpdate(
         { transactionId, monthYear, userId: user.userId },
-        { $set: { paid } },
+        { $set: updateData },
         { upsert: true, new: true }
       );
     } else {
