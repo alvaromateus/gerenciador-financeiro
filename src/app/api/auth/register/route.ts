@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getDb, saveDb } from '@/lib/db';
+import connectToDatabase from '@/lib/mongodb';
+import { UserModel } from '@/models';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
 import { signToken } from '@/lib/auth';
@@ -12,26 +13,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Username and password are required' }, { status: 400 });
     }
 
-    const db = await getDb();
-    const existingUser = db.users.find((u) => u.username === username);
+    await connectToDatabase();
+    
+    const existingUser = await UserModel.findOne({ username });
 
     if (existingUser) {
       return NextResponse.json({ error: 'User already exists' }, { status: 409 });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const newUser = {
-      id: uuidv4(),
+    const userId = uuidv4();
+    
+    await UserModel.create({
+      id: userId,
       username,
       passwordHash,
-    };
+    });
 
-    db.users.push(newUser);
-    await saveDb(db);
+    const token = await signToken({ userId, username });
 
-    const token = await signToken({ userId: newUser.id, username: newUser.username });
-
-    const response = NextResponse.json({ success: true, user: { id: newUser.id, username: newUser.username } });
+    const response = NextResponse.json({ success: true, user: { id: userId, username } });
     response.cookies.set({
       name: 'auth-token',
       value: token,

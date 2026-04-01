@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getDb, saveDb } from '@/lib/db';
+import connectToDatabase from '@/lib/mongodb';
+import { TransactionModel, RecurringStatusModel } from '@/models';
 import { getUserFromCookies } from '@/lib/auth';
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -9,15 +10,18 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 
   try {
     const data = await req.json();
-    const db = await getDb();
+    await connectToDatabase();
 
-    const index = db.transactions.findIndex(t => t.id === id && t.userId === user.userId);
-    if (index === -1) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    const updated = await TransactionModel.findOneAndUpdate(
+      { id, userId: user.userId },
+      { $set: data },
+      { new: true }
+    ).lean();
 
-    db.transactions[index] = { ...db.transactions[index], ...data };
-    await saveDb(db);
+    if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    return NextResponse.json(db.transactions[index]);
+    const { _id, __v, ...cleanTransaction } = updated;
+    return NextResponse.json(cleanTransaction);
   } catch (error) {
     return NextResponse.json({ error: 'Failed to update transaction' }, { status: 500 });
   }
@@ -29,17 +33,13 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
   const { id } = await params;
 
   try {
-    const db = await getDb();
+    await connectToDatabase();
 
-    const index = db.transactions.findIndex(t => t.id === id && t.userId === user.userId);
-    if (index === -1) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    const deleted = await TransactionModel.findOneAndDelete({ id, userId: user.userId });
+    if (!deleted) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-    db.transactions.splice(index, 1);
-    
     // Also remove any recurring statuses for this transaction
-    db.recurringStatuses = db.recurringStatuses.filter(s => s.transactionId !== id);
-
-    await saveDb(db);
+    await RecurringStatusModel.deleteMany({ transactionId: id, userId: user.userId });
 
     return NextResponse.json({ success: true });
   } catch (error) {

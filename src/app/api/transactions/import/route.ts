@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getDb, saveDb } from '@/lib/db';
+import connectToDatabase from '@/lib/mongodb';
+import { TransactionModel, RecurringStatusModel } from '@/models';
 import { getUserFromCookies } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -9,7 +10,7 @@ export async function POST(req: Request) {
 
   try {
     const { transactions = [], recurringStatuses = [] } = await req.json();
-    const db = await getDb();
+    await connectToDatabase();
 
     const idMap = new Map<string, string>();
 
@@ -30,10 +31,13 @@ export async function POST(req: Request) {
       userId: user.userId
     }));
 
-    db.transactions.push(...newTransactions);
-    db.recurringStatuses.push(...newStatuses);
-
-    await saveDb(db);
+    if (newTransactions.length > 0) {
+      await TransactionModel.insertMany(newTransactions);
+    }
+    
+    if (newStatuses.length > 0) {
+      await RecurringStatusModel.insertMany(newStatuses);
+    }
 
     return NextResponse.json({ success: true, count: newTransactions.length });
   } catch (error) {

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import connectToDatabase from '@/lib/mongodb';
+import { UserModel } from '@/models';
 import bcrypt from 'bcryptjs';
 import { signToken } from '@/lib/auth';
 
@@ -11,8 +12,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Username and password are required' }, { status: 400 });
     }
 
-    const db = await getDb();
-    const user = db.users.find((u) => u.username === username);
+    await connectToDatabase();
+    const user = await UserModel.findOne({ username });
 
     if (!user) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
