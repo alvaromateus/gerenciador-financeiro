@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { Transaction, MonthlyOccurrence, RecurringPaymentStatus, EntryType } from '@/types';
+import { Transaction, MonthlyOccurrence, RecurringPaymentStatus, EntryType, Investment, InvestmentTransaction } from '@/types';
 import { startOfMonth, endOfMonth, parseISO, isWithinInterval, isBefore, isAfter, format, addMonths, subMonths, isSameMonth } from 'date-fns';
 import { useAuth } from './AuthContext';
 
@@ -14,6 +14,8 @@ interface FinanceContextProps {
   pendingSummary: { toReceive: number; toPay: number; count: number };
   isFormOpen: boolean;
   editingTransaction: Transaction | null;
+  investments: Investment[];
+  investmentTransactions: InvestmentTransaction[];
   addTransaction: (transaction: Omit<Transaction, 'id' | 'userId'>) => Promise<void>;
   updateTransaction: (id: string, transaction: Omit<Transaction, 'id' | 'userId'>) => Promise<void>;
   toggleTransactionStatus: (transactionId: string, monthYear: string, isRecurring: boolean, currentPaidState: boolean) => Promise<void>;
@@ -25,6 +27,9 @@ interface FinanceContextProps {
   closeForm: () => void;
   importData: (jsonData: any) => Promise<void>;
   copyToCurrentMonth: (transaction: Transaction) => Promise<void>;
+  addInvestment: (investment: Omit<Investment, 'id' | 'userId' | 'currentBalance' | 'totalInvested'>) => Promise<void>;
+  addInvestmentTransaction: (investmentId: string, payload: { type: string; amount: number; date: string }) => Promise<void>;
+  deleteInvestment: (id: string) => Promise<void>;
 }
 
 const FinanceContext = createContext<FinanceContextProps | undefined>(undefined);
@@ -34,6 +39,8 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [recurringStatuses, setRecurringStatuses] = useState<RecurringPaymentStatus[]>([]);
+  const [investments, setInvestments] = useState<Investment[]>([]);
+  const [investmentTransactions, setInvestmentTransactions] = useState<InvestmentTransaction[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
@@ -45,11 +52,57 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
           setTransactions(data.transactions || []);
           setRecurringStatuses(data.recurringStatuses || []);
         });
+
+      fetch('/api/investments')
+        .then(res => res.json())
+        .then(data => {
+          setInvestments(data.investments || []);
+          setInvestmentTransactions(data.transactions || []);
+        });
     } else {
       setTransactions([]);
       setRecurringStatuses([]);
+      setInvestments([]);
+      setInvestmentTransactions([]);
     }
   }, [user]);
+
+  const addInvestment = async (investmentData: Omit<Investment, 'id' | 'userId' | 'currentBalance' | 'totalInvested'>) => {
+    const res = await fetch('/api/investments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(investmentData)
+    });
+    if (res.ok) {
+      const newInv = await res.json();
+      setInvestments((prev) => [...prev, newInv]);
+    }
+  };
+
+  const addInvestmentTransaction = async (investmentId: string, payload: { type: string; amount: number; date: string }) => {
+    const res = await fetch(`/api/investments/${investmentId}/transactions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      const updatedInv = await res.json();
+      setInvestments(prev => prev.map(inv => inv.id === investmentId ? updatedInv : inv));
+      
+      // Fetch transactions again to get the new generated transaction object
+      const txRes = await fetch('/api/investments');
+      const txData = await txRes.json();
+      setInvestmentTransactions(txData.transactions || []);
+    }
+  };
+
+  const deleteInvestment = async (id: string) => {
+    const res = await fetch(`/api/investments/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      setInvestments((prev) => prev.filter(inv => inv.id !== id));
+      setInvestmentTransactions((prev) => prev.filter(tx => tx.investmentId !== id));
+    }
+  };
 
   const importData = async (jsonData: any) => {
     const res = await fetch('/api/transactions/import', {
@@ -275,7 +328,12 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
       openForm,
       closeForm,
       importData,
-      copyToCurrentMonth
+      copyToCurrentMonth,
+      investments,
+      investmentTransactions,
+      addInvestment,
+      addInvestmentTransaction,
+      deleteInvestment
     }}>
       {children}
     </FinanceContext.Provider>

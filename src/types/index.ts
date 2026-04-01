@@ -17,10 +17,32 @@ export type Category =
 export type TransactionType = 'one-time' | 'recurring' | 'fixed';
 export type EntryType = 'income' | 'expense';
 
+export type InvestmentType = 'RENDA_FIXA' | 'RENDA_VARIAVEL' | 'CRIPTO' | 'OUTROS';
+export type InvestmentTxType = 'DEPOSIT' | 'WITHDRAWAL' | 'YIELD';
+
 export interface User {
   id: string;
   username: string;
   passwordHash: string;
+}
+
+export interface Investment {
+  id: string;
+  userId: string;
+  name: string;
+  institution: string;
+  type: InvestmentType;
+  currentBalance: number;
+  totalInvested: number;
+}
+
+export interface InvestmentTransaction {
+  id: string;
+  investmentId: string;
+  userId: string;
+  type: InvestmentTxType;
+  amount: number;
+  date: string;
 }
 
 export interface Transaction {

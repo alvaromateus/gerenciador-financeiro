@@ -33,3 +33,26 @@ const RecurringStatusSchema = new mongoose.Schema({
 });
 
 export const RecurringStatusModel = mongoose.models.RecurringStatus || mongoose.model('RecurringStatus', RecurringStatusSchema);
+
+const InvestmentSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  userId: { type: String, required: true, index: true },
+  name: { type: String, required: true },
+  institution: { type: String, required: true },
+  type: { type: String, required: true },
+  currentBalance: { type: Number, default: 0 },
+  totalInvested: { type: Number, default: 0 },
+});
+
+export const InvestmentModel = mongoose.models.Investment || mongoose.model('Investment', InvestmentSchema);
+
+const InvestmentTransactionSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  investmentId: { type: String, required: true, index: true },
+  userId: { type: String, required: true, index: true },
+  type: { type: String, required: true },
+  amount: { type: Number, required: true },
+  date: { type: String, required: true },
+});
+
+export const InvestmentTransactionModel = mongoose.models.InvestmentTransaction || mongoose.model('InvestmentTransaction', InvestmentTransactionSchema);
