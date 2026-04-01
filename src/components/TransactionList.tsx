@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { useFinance } from '@/context/FinanceContext';
 import { format, parseISO, isSameWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Trash2, Edit, CheckCircle2, Circle, ArrowUpRight, ArrowDownRight, RefreshCw, Filter, Search } from 'lucide-react';
+import { Trash2, Edit, CheckCircle2, Circle, ArrowUpRight, ArrowDownRight, RefreshCw, Search, Copy } from 'lucide-react';
 import { EntryType, MonthlyOccurrence, Category } from '@/types';
 
 const CATEGORIES: Category[] = [
@@ -14,13 +14,14 @@ const CATEGORIES: Category[] = [
 ];
 
 export default function TransactionList() {
-  const { currentMonthTransactions, toggleTransactionStatus, deleteTransaction, currentDate, openForm, transactions } = useFinance();
+  const { currentMonthTransactions, toggleTransactionStatus, deleteTransaction, currentDate, openForm, transactions, copyToCurrentMonth } = useFinance();
   
   // Filter states
   const [showThisWeek, setShowThisWeek] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterEntryType, setFilterEntryType] = useState<string>('all');
   const [filterPaidStatus, setFilterPaidStatus] = useState<string>('all');
+  const [filterTxType, setFilterTxType] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
   const formatCurrency = (value: number) => {
@@ -41,20 +42,13 @@ export default function TransactionList() {
 
   const filteredTransactions = useMemo(() => {
     return currentMonthTransactions.filter(t => {
-      // Search term
       if (searchTerm && !t.description.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-      
-      // Category
       if (filterCategory !== 'all' && t.category !== filterCategory) return false;
-      
-      // Entry Type
       if (filterEntryType !== 'all' && t.entryType !== filterEntryType) return false;
-      
-      // Paid Status
       if (filterPaidStatus === 'paid' && !t.isPaidInCurrentMonth) return false;
       if (filterPaidStatus === 'unpaid' && t.isPaidInCurrentMonth) return false;
+      if (filterTxType !== 'all' && t.type !== filterTxType) return false;
       
-      // This week
       if (showThisWeek) {
         const today = new Date();
         const txDate = parseISO(t.occurrenceDate);
@@ -63,7 +57,18 @@ export default function TransactionList() {
       
       return true;
     });
-  }, [currentMonthTransactions, searchTerm, filterCategory, filterEntryType, filterPaidStatus, showThisWeek]);
+  }, [currentMonthTransactions, searchTerm, filterCategory, filterEntryType, filterPaidStatus, filterTxType, showThisWeek]);
+
+  const filteredTotals = useMemo(() => {
+    return filteredTransactions.reduce(
+      (acc, curr) => {
+        if (curr.entryType === 'income') acc.income += curr.amount;
+        else acc.expense += curr.amount;
+        return acc;
+      },
+      { income: 0, expense: 0 }
+    );
+  }, [filteredTransactions]);
 
   if (currentMonthTransactions.length === 0) {
     return (
@@ -111,7 +116,7 @@ export default function TransactionList() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1 uppercase">Tipo</label>
+            <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1 uppercase">Entrada/Saída</label>
             <select 
               value={filterEntryType}
               onChange={e => setFilterEntryType(e.target.value)}
@@ -120,6 +125,20 @@ export default function TransactionList() {
               <option value="all">Todos</option>
               <option value="income">Receitas</option>
               <option value="expense">Despesas</option>
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1 uppercase">Repetição</label>
+            <select 
+              value={filterTxType}
+              onChange={e => setFilterTxType(e.target.value)}
+              className="px-3 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="all">Todos</option>
+              <option value="one-time">Único</option>
+              <option value="recurring">Recorrente</option>
+              <option value="fixed">Fixo</option>
             </select>
           </div>
 
@@ -150,9 +169,20 @@ export default function TransactionList() {
       </div>
 
       <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 overflow-hidden">
-        <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
+        <div className="p-4 sm:p-6 border-b border-zinc-100 dark:border-zinc-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">Registros do Mês</h2>
-          <span className="text-sm text-zinc-500">{filteredTransactions.length} itens</span>
+          
+          <div className="flex gap-4 text-sm bg-zinc-50 dark:bg-zinc-800 px-4 py-2 rounded-lg">
+            <div className="flex items-center gap-1.5">
+              <span className="text-zinc-500 dark:text-zinc-400">Receitas Filtradas:</span>
+              <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(filteredTotals.income)}</span>
+            </div>
+            <div className="w-px bg-zinc-200 dark:bg-zinc-700"></div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-zinc-500 dark:text-zinc-400">Despesas Filtradas:</span>
+              <span className="font-semibold text-rose-600 dark:text-rose-400">{formatCurrency(filteredTotals.expense)}</span>
+            </div>
+          </div>
         </div>
         
         <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
@@ -228,6 +258,16 @@ export default function TransactionList() {
                   </div>
                   
                   <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        const originalTx = transactions.find(t => t.id === transaction.originalId);
+                        if (originalTx) copyToCurrentMonth(originalTx);
+                      }}
+                      className="text-zinc-400 hover:text-emerald-500 transition-colors p-1"
+                      title="Copiar para mês atual"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
                     <button
                       onClick={() => {
                         const originalTx = transactions.find(t => t.id === transaction.originalId);

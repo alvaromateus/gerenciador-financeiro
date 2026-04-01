@@ -11,6 +11,7 @@ interface FinanceContextProps {
   recurringStatuses: RecurringPaymentStatus[];
   currentMonthTransactions: MonthlyOccurrence[];
   summary: { income: number; expense: number; balance: number };
+  pendingSummary: { toReceive: number; toPay: number; count: number };
   isFormOpen: boolean;
   editingTransaction: Transaction | null;
   addTransaction: (transaction: Omit<Transaction, 'id' | 'userId'>) => Promise<void>;
@@ -23,6 +24,7 @@ interface FinanceContextProps {
   openForm: (transaction?: Transaction) => void;
   closeForm: () => void;
   importData: (jsonData: any) => Promise<void>;
+  copyToCurrentMonth: (transaction: Transaction) => Promise<void>;
 }
 
 const FinanceContext = createContext<FinanceContextProps | undefined>(undefined);
@@ -89,6 +91,21 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const copyToCurrentMonth = async (transaction: Transaction) => {
+    const dueDay = transaction.dueDate ? parseISO(transaction.dueDate).getDate() : transaction.dueDay || 1;
+    const newDueDate = format(new Date(currentDate.getFullYear(), currentDate.getMonth(), dueDay), 'yyyy-MM-dd');
+    
+    await addTransaction({
+      description: `${transaction.description} (Cópia)`,
+      amount: transaction.amount,
+      entryType: transaction.entryType,
+      type: 'one-time',
+      category: transaction.category,
+      paid: false,
+      dueDate: newDueDate,
+    });
+  };
+
   const toggleTransactionStatus = async (transactionId: string, monthYear: string, isRecurring: boolean, currentPaidState: boolean) => {
     const res = await fetch('/api/transactions/status', {
       method: 'POST',
@@ -139,6 +156,7 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
     const startOfView = startOfMonth(currentDate);
     const endOfView = endOfMonth(currentDate);
     const currentMonthYear = format(currentDate, 'yyyy-MM');
+    const realCurrentMonthYear = format(new Date(), 'yyyy-MM');
 
     const occurrences: MonthlyOccurrence[] = [];
 
@@ -185,6 +203,11 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
         
         const isPaid = monthStatus ? monthStatus.paid : false;
         
+        // Hide fixed transactions in past months if they weren't paid
+        if (currentMonthYear < realCurrentMonthYear && !isPaid) {
+          return;
+        }
+
         const occurrenceDateStr = `${currentMonthYear}-${transaction.dueDay.toString().padStart(2, '0')}`;
         
         occurrences.push({
@@ -215,6 +238,23 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
     );
   }, [currentMonthTransactions]);
 
+  const pendingSummary = React.useMemo(() => {
+    return currentMonthTransactions.reduce(
+      (acc, curr) => {
+        if (!curr.isPaidInCurrentMonth) {
+          acc.count += 1;
+          if (curr.entryType === 'income') {
+            acc.toReceive += curr.amount;
+          } else {
+            acc.toPay += curr.amount;
+          }
+        }
+        return acc;
+      },
+      { toReceive: 0, toPay: 0, count: 0 }
+    );
+  }, [currentMonthTransactions]);
+
   return (
     <FinanceContext.Provider value={{
       currentDate,
@@ -222,6 +262,7 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
       recurringStatuses,
       currentMonthTransactions,
       summary,
+      pendingSummary,
       isFormOpen,
       editingTransaction,
       addTransaction,
@@ -233,7 +274,8 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
       goToCurrentMonth,
       openForm,
       closeForm,
-      importData
+      importData,
+      copyToCurrentMonth
     }}>
       {children}
     </FinanceContext.Provider>
