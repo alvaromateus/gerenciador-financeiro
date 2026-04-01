@@ -1,17 +1,21 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useFinance } from '@/context/FinanceContext';
 import { InvestmentType } from '@/types';
-import { Plus, X, TrendingUp, ArrowDownCircle, ArrowUpCircle, RefreshCw, Trash2, CheckCircle2 } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { Plus, X, ArrowDownCircle, ArrowUpCircle, RefreshCw, Trash2, BarChart3 } from 'lucide-react';
+import { format, parseISO, eachMonthOfInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
+
+const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316', '#ec4899', '#14b8a6', '#84cc16'];
 
 export default function InvestmentsView() {
-  const { currentMonthInvestments, addInvestment, addInvestmentTransaction, deleteInvestment } = useFinance();
+  const { currentMonthInvestments, investments, investmentTransactions, addInvestment, addInvestmentTransaction, deleteInvestment } = useFinance();
   
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [txModalInvestmentId, setTxModalInvestmentId] = useState<string | null>(null);
+  const [historyModalInvestmentId, setHistoryModalInvestmentId] = useState<string | null>(null);
   
   // Add Form State
   const [name, setName] = useState('');
@@ -64,6 +68,67 @@ export default function InvestmentsView() {
   const totalCurrent = currentMonthInvestments.reduce((acc, curr) => acc + curr.currentBalance, 0);
   const totalInvested = currentMonthInvestments.reduce((acc, curr) => acc + curr.totalInvested, 0);
   const totalYield = totalCurrent - totalInvested;
+
+  const getHistoryData = (invId: string) => {
+    const inv = investments.find(i => i.id === invId);
+    if (!inv) return null;
+
+    const txs = investmentTransactions.filter(t => t.investmentId === invId).sort((a, b) => a.date.localeCompare(b.date));
+    if (txs.length === 0) return null;
+
+    const firstDate = parseISO(txs[0].date);
+    const today = new Date();
+    const endRange = firstDate > today ? firstDate : today;
+    const months = eachMonthOfInterval({ start: firstDate, end: endRange });
+
+    const timeline: any[] = [];
+    const pieMap = new Map<string, number>();
+
+    let runningBalance = 0;
+    let runningInvested = 0;
+
+    months.forEach(month => {
+      const monthStr = format(month, 'yyyy-MM');
+      const monthLabel = format(month, 'MMM/yy', { locale: ptBR });
+
+      const monthTxs = txs.filter(t => t.date.startsWith(monthStr));
+      let monthYield = 0;
+
+      monthTxs.forEach(tx => {
+        if (tx.type === 'DEPOSIT') {
+          runningBalance += tx.amount;
+          runningInvested += tx.amount;
+        } else if (tx.type === 'WITHDRAWAL') {
+          runningBalance = Math.max(0, runningBalance - tx.amount);
+          runningInvested = Math.max(0, runningInvested - tx.amount);
+        } else if (tx.type === 'YIELD') {
+          runningBalance += tx.amount;
+          monthYield += tx.amount;
+        }
+      });
+
+      timeline.push({
+        name: monthLabel,
+        Patrimônio: runningBalance,
+        Investido: runningInvested,
+      });
+
+      if (monthYield > 0) {
+        pieMap.set(monthLabel, (pieMap.get(monthLabel) || 0) + monthYield);
+      }
+    });
+
+    const pieData = Array.from(pieMap.entries()).map(([name, value]) => ({ name, value }));
+
+    const composition = [
+      { name: 'Aportes', value: runningInvested },
+      { name: 'Rendimentos', value: Math.max(0, runningBalance - runningInvested) }
+    ].filter(item => item.value > 0);
+
+    return { timeline, pieData, composition, invName: inv.name };
+  };
+
+  const historyData = historyModalInvestmentId ? getHistoryData(historyModalInvestmentId) : null;
 
   return (
     <div className="space-y-6">
@@ -132,7 +197,7 @@ export default function InvestmentsView() {
                     <span className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
                       {formatCurrency(inv.currentBalance)}
                     </span>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap justify-end gap-2">
                       <button 
                         onClick={() => { setTxType('DEPOSIT'); setTxModalInvestmentId(inv.id); }}
                         className="flex items-center gap-1 px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-900/20 dark:text-emerald-400 dark:hover:bg-emerald-900/40 rounded-lg text-sm font-medium transition-colors"
@@ -151,6 +216,13 @@ export default function InvestmentsView() {
                         title="Atualizar Saldo Atual (Rendimento)"
                       >
                         <RefreshCw className="w-4 h-4" /> Atualizar
+                      </button>
+                      <button 
+                        onClick={() => setHistoryModalInvestmentId(inv.id)}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/40 rounded-lg text-sm font-medium transition-colors"
+                        title="Ver Desempenho e Histórico"
+                      >
+                        <BarChart3 className="w-4 h-4" /> Desempenho
                       </button>
                       <button 
                         onClick={() => deleteInvestment(inv.id)}
@@ -196,6 +268,10 @@ export default function InvestmentsView() {
                   <option value="OUTROS">Outros</option>
                 </select>
               </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Saldo Atual Inicial (Opcional)</label>
+                <input type="number" step="0.01" min="0" value={initialBalance} onChange={e => setInitialBalance(e.target.value)} className="w-full px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="0,00" />
+              </div>
               <button type="submit" className="w-full py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors mt-4">
                 Cadastrar Investimento
               </button>
@@ -232,6 +308,105 @@ export default function InvestmentsView() {
                 Confirmar
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* History Modal */}
+      {historyModalInvestmentId && historyData && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-4xl shadow-xl overflow-hidden max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-6 border-b border-zinc-100 dark:border-zinc-800 sticky top-0 bg-white dark:bg-zinc-900 z-10">
+              <h2 className="text-xl font-bold">Desempenho: {historyData.invName}</h2>
+              <button onClick={() => setHistoryModalInvestmentId(null)} className="text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-8">
+              {/* Line Chart */}
+              <div>
+                <h3 className="text-sm font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-4">Evolução do Patrimônio Mês a Mês</h3>
+                <div className="h-64 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={historyData.timeline} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} dy={10} />
+                      <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `R$ ${value}`} tick={{ fontSize: 12, fill: '#6b7280' }} dx={-10} />
+                      <RechartsTooltip formatter={(value: any) => formatCurrency(Number(value))} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                      <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }} />
+                      <Line type="monotone" dataKey="Patrimônio" stroke="#6366f1" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                      <Line type="monotone" dataKey="Investido" stroke="#10b981" strokeWidth={3} dot={false} strokeDasharray="5 5" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Pie Chart: Monthly Increments */}
+                <div>
+                  <h3 className="text-sm font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-4 text-center">Incrementos de Rendimento por Mês</h3>
+                  {historyData.pieData.length > 0 ? (
+                    <div className="h-64 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={historyData.pieData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={80}
+                            paddingAngle={2}
+                            dataKey="value"
+                          >
+                            {historyData.pieData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <RechartsTooltip formatter={(value: any) => formatCurrency(Number(value))} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                          <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <div className="h-64 flex items-center justify-center text-zinc-400 text-sm">
+                      Sem rendimentos positivos registrados.
+                    </div>
+                  )}
+                </div>
+
+                {/* Pie Chart: Composition */}
+                <div>
+                  <h3 className="text-sm font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-4 text-center">Composição Atual (Aportes x Lucro)</h3>
+                  {historyData.composition.length > 0 ? (
+                    <div className="h-64 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={historyData.composition}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={80}
+                            paddingAngle={2}
+                            dataKey="value"
+                          >
+                            <Cell fill="#10b981" /> {/* Invested */}
+                            <Cell fill="#6366f1" /> {/* Yield */}
+                          </Pie>
+                          <RechartsTooltip formatter={(value: any) => formatCurrency(Number(value))} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                          <Legend iconType="circle" wrapperStyle={{ fontSize: '12px' }} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <div className="h-64 flex items-center justify-center text-zinc-400 text-sm">
+                      Sem saldo ativo.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
