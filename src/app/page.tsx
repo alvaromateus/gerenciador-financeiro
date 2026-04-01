@@ -29,6 +29,9 @@ export default function Home() {
         <Summary />
         <TransactionList />
       </main>
+      <footer className="w-full text-center py-6 text-sm text-zinc-500 dark:text-zinc-500">
+        Desenvolvido por Alvaro Mateus Santana
+      </footer>
       <TransactionForm />
     </div>
   );
