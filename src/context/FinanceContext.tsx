@@ -16,6 +16,7 @@ interface FinanceContextProps {
   editingTransaction: Transaction | null;
   investments: Investment[];
   investmentTransactions: InvestmentTransaction[];
+  currentMonthInvestments: Investment[];
   addTransaction: (transaction: Omit<Transaction, 'id' | 'userId'>) => Promise<void>;
   updateTransaction: (id: string, transaction: Omit<Transaction, 'id' | 'userId'>) => Promise<void>;
   toggleTransactionStatus: (transactionId: string, monthYear: string, isRecurring: boolean, currentPaidState: boolean, amount?: number) => Promise<void>;
@@ -27,7 +28,7 @@ interface FinanceContextProps {
   closeForm: () => void;
   importData: (jsonData: any) => Promise<void>;
   copyToCurrentMonth: (transaction: Transaction) => Promise<void>;
-  addInvestment: (investment: Omit<Investment, 'id' | 'userId' | 'currentBalance' | 'totalInvested'>) => Promise<void>;
+  addInvestment: (investment: Omit<Investment, 'id' | 'userId' | 'currentBalance' | 'totalInvested'> & { currentBalance?: number, totalInvested?: number }) => Promise<void>;
   addInvestmentTransaction: (investmentId: string, payload: { type: string; amount: number; date: string }) => Promise<void>;
   deleteInvestment: (id: string) => Promise<void>;
 }
@@ -67,7 +68,7 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user]);
 
-  const addInvestment = async (investmentData: Omit<Investment, 'id' | 'userId' | 'currentBalance' | 'totalInvested'>) => {
+  const addInvestment = async (investmentData: Omit<Investment, 'id' | 'userId' | 'currentBalance' | 'totalInvested'> & { currentBalance?: number, totalInvested?: number }) => {
     const res = await fetch('/api/investments', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -76,6 +77,13 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
     if (res.ok) {
       const newInv = await res.json();
       setInvestments((prev) => [...prev, newInv]);
+
+      if (investmentData.currentBalance && investmentData.currentBalance > 0) {
+        // Fetch transactions again to get the auto-generated initial deposit
+        const txRes = await fetch('/api/investments');
+        const txData = await txRes.json();
+        setInvestmentTransactions(txData.transactions || []);
+      }
     }
   };
 
@@ -93,6 +101,14 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
       const txRes = await fetch('/api/investments');
       const txData = await txRes.json();
       setInvestmentTransactions(txData.transactions || []);
+      
+      // If it was a withdrawal, it auto-created an income in the main account, so fetch main transactions again
+      if (payload.type === 'WITHDRAWAL') {
+        const mainRes = await fetch('/api/transactions');
+        const mainData = await mainRes.json();
+        setTransactions(mainData.transactions || []);
+        setRecurringStatuses(mainData.recurringStatuses || []);
+      }
     }
   };
 
@@ -103,6 +119,40 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
       setInvestmentTransactions((prev) => prev.filter(tx => tx.investmentId !== id));
     }
   };
+
+  // Calculate historical state of investments up to the current viewed month
+  const currentMonthInvestments: Investment[] = React.useMemo(() => {
+    const endOfView = endOfMonth(currentDate);
+
+    return investments.map(inv => {
+      // Get all transactions for this investment up to the end of the currently viewed month
+      const txs = investmentTransactions.filter(
+        tx => tx.investmentId === inv.id && parseISO(tx.date) <= endOfView
+      );
+      
+      let viewedBalance = 0;
+      let viewedInvested = 0;
+      
+      // Reconstruct the balance chronologically
+      txs.sort((a, b) => a.date.localeCompare(b.date)).forEach(tx => {
+        if (tx.type === 'DEPOSIT') {
+          viewedBalance += tx.amount;
+          viewedInvested += tx.amount;
+        } else if (tx.type === 'WITHDRAWAL') {
+          viewedBalance = Math.max(0, viewedBalance - tx.amount);
+          viewedInvested = Math.max(0, viewedInvested - tx.amount);
+        } else if (tx.type === 'YIELD') {
+          viewedBalance += tx.amount;
+        }
+      });
+
+      return {
+        ...inv,
+        currentBalance: viewedBalance,
+        totalInvested: viewedInvested,
+      };
+    });
+  }, [investments, investmentTransactions, currentDate]);
 
   const importData = async (jsonData: any) => {
     const res = await fetch('/api/transactions/import', {
@@ -335,6 +385,7 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
       copyToCurrentMonth,
       investments,
       investmentTransactions,
+      currentMonthInvestments,
       addInvestment,
       addInvestmentTransaction,
       deleteInvestment

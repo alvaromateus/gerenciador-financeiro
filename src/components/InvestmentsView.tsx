@@ -8,7 +8,7 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export default function InvestmentsView() {
-  const { investments, investmentTransactions, addInvestment, addInvestmentTransaction, deleteInvestment } = useFinance();
+  const { currentMonthInvestments, addInvestment, addInvestmentTransaction, deleteInvestment } = useFinance();
   
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [txModalInvestmentId, setTxModalInvestmentId] = useState<string | null>(null);
@@ -36,13 +36,9 @@ export default function InvestmentsView() {
       name,
       institution,
       type,
+      currentBalance: initialBalance ? parseFloat(initialBalance) : 0,
+      totalInvested: initialBalance ? parseFloat(initialBalance) : 0,
     });
-
-    if (initialBalance && parseFloat(initialBalance) > 0) {
-      // Find the newly created one? Actually the API doesn't let us easily attach an initial transaction 
-      // without its ID. The `addInvestment` returns void currently. 
-      // But we allow currentBalance to be sent in POST. Let's fix that.
-    }
 
     setName('');
     setInstitution('');
@@ -65,8 +61,8 @@ export default function InvestmentsView() {
     setTxAmount('');
   };
 
-  const totalCurrent = investments.reduce((acc, curr) => acc + curr.currentBalance, 0);
-  const totalInvested = investments.reduce((acc, curr) => acc + curr.totalInvested, 0);
+  const totalCurrent = currentMonthInvestments.reduce((acc, curr) => acc + curr.currentBalance, 0);
+  const totalInvested = currentMonthInvestments.reduce((acc, curr) => acc + curr.totalInvested, 0);
   const totalYield = totalCurrent - totalInvested;
 
   return (
@@ -74,15 +70,15 @@ export default function InvestmentsView() {
       {/* Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800">
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">Patrimônio Atual</p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">Patrimônio (Neste mês)</p>
           <p className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 mt-1">{formatCurrency(totalCurrent)}</p>
         </div>
         <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800">
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">Total Investido (Aportes)</p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">Total Investido (Neste mês)</p>
           <p className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mt-1">{formatCurrency(totalInvested)}</p>
         </div>
         <div className={`p-6 rounded-2xl shadow-sm border ${totalYield >= 0 ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-rose-50 border-rose-200 dark:bg-rose-900/20 dark:border-rose-900/30 text-rose-700 dark:text-rose-400'}`}>
-          <p className="text-sm font-medium opacity-80">Rendimento Total</p>
+          <p className="text-sm font-medium opacity-80">Rendimento Acumulado</p>
           <p className="text-xl font-bold mt-1">{totalYield >= 0 ? '+' : ''}{formatCurrency(totalYield)}</p>
         </div>
       </div>
@@ -90,7 +86,7 @@ export default function InvestmentsView() {
       {/* List */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 overflow-hidden">
         <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
-          <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">Meus Investimentos</h2>
+          <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">Investimentos no período</h2>
           <button 
             onClick={() => setIsAddFormOpen(true)}
             className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
@@ -100,10 +96,10 @@ export default function InvestmentsView() {
         </div>
 
         <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-          {investments.length === 0 ? (
-            <div className="p-12 text-center text-zinc-500">Nenhum investimento cadastrado.</div>
+          {currentMonthInvestments.length === 0 ? (
+            <div className="p-12 text-center text-zinc-500">Nenhum investimento cadastrado ou não há saldo neste mês.</div>
           ) : (
-            investments.map(inv => {
+            currentMonthInvestments.map(inv => {
               const yieldValue = inv.currentBalance - inv.totalInvested;
               const yieldPercent = inv.totalInvested > 0 ? (yieldValue / inv.totalInvested) * 100 : 0;
 

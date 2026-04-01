@@ -44,6 +44,17 @@ export async function POST(req: Request) {
 
     await InvestmentModel.create(newInvestment);
 
+    if (newInvestment.currentBalance > 0) {
+      await InvestmentTransactionModel.create({
+        id: uuidv4(),
+        investmentId: newInvestment.id,
+        userId: user.userId,
+        type: 'DEPOSIT',
+        amount: newInvestment.currentBalance,
+        date: new Date().toISOString().split('T')[0],
+      });
+    }
+
     return NextResponse.json(newInvestment, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to create investment' }, { status: 500 });

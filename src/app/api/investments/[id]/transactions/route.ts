@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/mongodb';
-import { InvestmentModel, InvestmentTransactionModel } from '@/models';
+import { InvestmentModel, InvestmentTransactionModel, TransactionModel } from '@/models';
 import { getUserFromCookies } from '@/lib/auth';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -27,6 +27,20 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     } else if (type === 'WITHDRAWAL') {
       newCurrentBalance = Math.max(0, newCurrentBalance - numAmount);
       newTotalInvested = Math.max(0, newTotalInvested - numAmount);
+
+      // Auto-create income in main finance area
+      await TransactionModel.create({
+        id: uuidv4(),
+        userId: user.userId,
+        description: `Resgate: ${investment.name}`,
+        amount: numAmount,
+        entryType: 'income',
+        type: 'one-time',
+        category: 'Rendimentos',
+        paid: true,
+        dueDate: date,
+      });
+      
     } else if (type === 'YIELD') {
       // For Yield, user sends the NEW total balance. We calculate the difference.
       const difference = numAmount - investment.currentBalance;
