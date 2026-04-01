@@ -1,0 +1,331 @@
+{
+  "transactions": [
+    {
+      "id": "9c02b0e1-6237-41bf-bf90-0840343156fe",
+      "description": "Agua / Sanepar",
+      "dueDay": 1,
+      "amount": 120,
+      "entryType": "expense",
+      "type": "fixed",
+      "category": "Moradia",
+      "paid": false
+    },
+    {
+      "id": "5cd7e008-b137-4fed-838e-3b05baec52f9",
+      "description": "Luz / Copel",
+      "dueDay": 1,
+      "amount": 250,
+      "entryType": "expense",
+      "type": "fixed",
+      "category": "Moradia",
+      "paid": false
+    },
+    {
+      "id": "45653f62-c530-4363-9636-fed245050994",
+      "description": "IPTU 2026",
+      "dueDay": 20,
+      "amount": 85.51,
+      "entryType": "expense",
+      "type": "fixed",
+      "category": "Moradia",
+      "paid": false
+    },
+    {
+      "id": "960e289b-92fa-4013-89dd-f4e24138dc22",
+      "description": "IPVA 03",
+      "dueDay": 13,
+      "amount": 347.92,
+      "entryType": "expense",
+      "type": "fixed",
+      "category": "Transporte",
+      "paid": false
+    },
+    {
+      "id": "cde2e955-f804-452f-9289-af94a6f0ba0d",
+      "description": "Cartão XP (até 10/24)",
+      "dueDay": 5,
+      "amount": 0,
+      "entryType": "expense",
+      "type": "fixed",
+      "category": "Outros",
+      "paid": false
+    },
+    {
+      "id": "0c0bea5b-f25c-4a70-ae8d-e155b2bff7a8",
+      "description": "Cartão Nu Cintia",
+      "dueDay": 5,
+      "amount": 117,
+      "entryType": "expense",
+      "type": "fixed",
+      "category": "Outros",
+      "paid": false
+    },
+    {
+      "id": "ecef7311-add6-4a10-84b9-389c14a5ed50",
+      "description": "Credifato",
+      "dueDay": 10,
+      "amount": 0,
+      "entryType": "expense",
+      "type": "fixed",
+      "category": "Outros",
+      "paid": false
+    },
+    {
+      "id": "cbc52141-6015-4564-82b0-b6afa145a661",
+      "description": "Cartão nubank ",
+      "dueDay": 2,
+      "amount": 9500,
+      "entryType": "expense",
+      "type": "fixed",
+      "category": "Outros",
+      "paid": false
+    },
+    {
+      "id": "72ecf3e4-8bd5-4263-9ec0-504be391c4d6",
+      "description": "Cesta caixa",
+      "dueDay": 10,
+      "amount": 14.6,
+      "entryType": "expense",
+      "type": "fixed",
+      "category": "Outros",
+      "paid": false
+    },
+    {
+      "id": "b011007e-83ac-4bc0-afdb-c1e7ef58cd03",
+      "description": "Censupeg",
+      "dueDay": 10,
+      "amount": 179,
+      "entryType": "expense",
+      "type": "fixed",
+      "category": "Educação",
+      "paid": false
+    },
+    {
+      "id": "550d6f54-ffbe-49c8-ac6c-7cd0970bc540",
+      "description": "Academia boleiro",
+      "dueDay": 10,
+      "amount": 129.9,
+      "entryType": "expense",
+      "type": "fixed",
+      "category": "Saúde",
+      "paid": false
+    },
+    {
+      "id": "70bc3651-13d0-4070-b666-719f526e1e65",
+      "description": "Aulas (bale e teclado)",
+      "dueDay": 10,
+      "amount": 230,
+      "entryType": "expense",
+      "type": "fixed",
+      "category": "Educação",
+      "paid": false
+    },
+    {
+      "id": "6ce5b125-04cb-467d-bc99-ebdd6bc54979",
+      "description": "Tapete",
+      "dueDay": 1,
+      "amount": 45.5,
+      "entryType": "expense",
+      "type": "fixed",
+      "category": "Moradia",
+      "paid": false
+    },
+    {
+      "id": "a5f889e0-b627-4e08-af17-382a9c4053f7",
+      "description": "Microfone",
+      "dueDay": 1,
+      "amount": 49,
+      "entryType": "expense",
+      "type": "fixed",
+      "category": "Lazer",
+      "paid": false
+    },
+    {
+      "id": "9b1ebc57-c161-4fe2-ac4c-348332830dbd",
+      "description": "Havan",
+      "dueDay": 10,
+      "amount": 250,
+      "entryType": "expense",
+      "type": "fixed",
+      "category": "Vestuário",
+      "paid": false
+    },
+    {
+      "id": "3b76c7f4-1e3b-4212-bb64-6ff1875351c6",
+      "description": "Internet / Oi",
+      "dueDay": 11,
+      "amount": 101.9,
+      "entryType": "expense",
+      "type": "fixed",
+      "category": "Moradia",
+      "paid": false
+    },
+    {
+      "id": "804bbb77-5f04-48a6-8d18-9d41a5670fd0",
+      "description": "Dentista/Aparelho Mateus",
+      "dueDay": 15,
+      "amount": 100,
+      "entryType": "expense",
+      "type": "fixed",
+      "category": "Saúde",
+      "paid": false
+    },
+    {
+      "id": "c4d018e0-a567-4bdb-8d2c-c5bd8e2a4f0b",
+      "description": "Roupas Mateus",
+      "dueDay": 1,
+      "amount": 89,
+      "entryType": "expense",
+      "type": "fixed",
+      "category": "Vestuário",
+      "paid": false
+    },
+    {
+      "id": "179a375b-c49f-4634-a024-09f2375e026b",
+      "description": "Planeta Pe",
+      "dueDay": 1,
+      "amount": 126,
+      "entryType": "expense",
+      "type": "fixed",
+      "category": "Vestuário",
+      "paid": false
+    },
+    {
+      "id": "3d8b84c6-6d55-489c-8ca7-6463b73b4690",
+      "description": "Cozinha",
+      "dueDay": 5,
+      "amount": 43.3,
+      "entryType": "expense",
+      "type": "fixed",
+      "category": "Moradia",
+      "paid": false
+    },
+    {
+      "id": "f6346ca1-29a6-407f-bbaf-8b51b79a63ba",
+      "description": "Shampoo Boticario",
+      "dueDay": 30,
+      "amount": 70,
+      "entryType": "expense",
+      "type": "fixed",
+      "category": "Farmácia",
+      "paid": false
+    },
+    {
+      "id": "6d95d91b-eedc-4991-b744-0ca003aa0648",
+      "description": "ParcelaCarro",
+      "dueDay": 16,
+      "amount": 2957,
+      "entryType": "expense",
+      "type": "fixed",
+      "category": "Transporte",
+      "paid": false
+    },
+    {
+      "id": "efa2ebe6-5647-4f11-8fef-3bf39b1e0375",
+      "description": "Embracon",
+      "dueDay": 10,
+      "amount": 2781.79,
+      "entryType": "expense",
+      "type": "fixed",
+      "category": "Outros",
+      "paid": false
+    },
+    {
+      "id": "22be5c3f-e6fa-4ea5-a802-7cc3794e0a6c",
+      "description": "Seguro carro (yelumseguros)",
+      "dueDay": 23,
+      "amount": 208.56,
+      "entryType": "expense",
+      "type": "fixed",
+      "category": "Transporte",
+      "paid": false
+    },
+    {
+      "id": "afe1bd6c-a6c5-4c2c-b15d-792d7eac3a24",
+      "description": "Cartão Mercado Pago",
+      "dueDay": 4,
+      "amount": 1154,
+      "entryType": "expense",
+      "type": "fixed",
+      "category": "Outros",
+      "paid": false
+    },
+    {
+      "id": "e5759a36-5663-43f6-899a-efa4afedb915",
+      "description": "Parcelados nubank e MP",
+      "dueDay": 2,
+      "amount": 0,
+      "entryType": "expense",
+      "type": "fixed",
+      "category": "Outros",
+      "paid": false
+    },
+    {
+      "id": "b509c38a-1dbe-4a52-92f9-4b9259228ecd",
+      "description": "TV Pai",
+      "dueDay": 2,
+      "amount": 112.93,
+      "entryType": "income",
+      "type": "fixed",
+      "category": "Outros",
+      "paid": false
+    },
+    {
+      "id": "1c281f37-c36c-42a5-84d2-2b8050670bad",
+      "description": "Emprestimo Silvana",
+      "dueDay": 1,
+      "amount": 593,
+      "entryType": "income",
+      "type": "fixed",
+      "category": "Outros",
+      "paid": true
+    },
+    {
+      "id": "e3761576-ed4f-4b24-b0e2-7e41cb4ace7a",
+      "description": "Emprestimo Silvana2",
+      "dueDay": 1,
+      "amount": 474.02,
+      "entryType": "income",
+      "type": "fixed",
+      "category": "Outros",
+      "paid": true
+    },
+    {
+      "id": "3d9b578b-076a-455d-80e5-7bf38f083284",
+      "description": "Emprestimo Silvana3",
+      "dueDay": 1,
+      "amount": 242.2,
+      "entryType": "income",
+      "type": "fixed",
+      "category": "Outros",
+      "paid": true
+    },
+    {
+      "id": "268613b8-6fef-4e45-a22e-161ee2d5a69d",
+      "description": "Emprestimo Gustavo",
+      "dueDay": 1,
+      "amount": 242,
+      "entryType": "income",
+      "type": "fixed",
+      "category": "Outros",
+      "paid": false
+    }
+  ],
+  "recurringStatuses": [
+    {
+      "transactionId": "1c281f37-c36c-42a5-84d2-2b8050670bad",
+      "monthYear": "2026-04",
+      "paid": true
+    },
+    {
+      "transactionId": "e3761576-ed4f-4b24-b0e2-7e41cb4ace7a",
+      "monthYear": "2026-04",
+      "paid": true
+    },
+    {
+      "transactionId": "3d9b578b-076a-455d-80e5-7bf38f083284",
+      "monthYear": "2026-04",
+      "paid": true
+    }
+  ]
+}
