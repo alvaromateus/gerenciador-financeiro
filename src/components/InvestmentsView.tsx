@@ -11,11 +11,25 @@ import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, L
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316', '#ec4899', '#14b8a6', '#84cc16'];
 
 export default function InvestmentsView() {
-  const { currentMonthInvestments, investments, investmentTransactions, addInvestment, addInvestmentTransaction, deleteInvestment } = useFinance();
+  const { 
+    currentMonthInvestments, 
+    investments, 
+    investmentTransactions, 
+    addInvestment, 
+    addInvestmentTransaction, 
+    updateInvestmentTransaction,
+    deleteInvestmentTransaction,
+    deleteInvestment 
+  } = useFinance();
   
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [txModalInvestmentId, setTxModalInvestmentId] = useState<string | null>(null);
   const [historyModalInvestmentId, setHistoryModalInvestmentId] = useState<string | null>(null);
+  const [dividendListInvestmentId, setDividendListInvestmentId] = useState<string | null>(null);
+  
+  const [editingTxId, setEditingTxId] = useState<string | null>(null);
+  const [editAmount, setEditAmount] = useState('');
+  const [editDate, setEditDate] = useState('');
   
   // Add Form State
   const [name, setName] = useState('');
@@ -70,7 +84,8 @@ export default function InvestmentsView() {
 
   const totalCurrent = currentMonthInvestments.reduce((acc, curr) => acc + curr.currentBalance, 0);
   const totalInvested = currentMonthInvestments.reduce((acc, curr) => acc + curr.totalInvested, 0);
-  const totalYield = totalCurrent - totalInvested;
+  const totalYield = currentMonthInvestments.reduce((acc, curr) => acc + (curr.yieldValue || 0), 0);
+  const totalDividends = currentMonthInvestments.reduce((acc, curr) => acc + (curr.dividendValue || 0), 0);
 
   const getHistoryData = (invId: string) => {
     const inv = investments.find(i => i.id === invId);
@@ -123,9 +138,11 @@ export default function InvestmentsView() {
 
     const pieData = Array.from(pieMap.entries()).map(([name, value]) => ({ name, value }));
 
+    const currentInv = currentMonthInvestments.find(i => i.id === invId);
     const composition = [
       { name: 'Aportes', value: runningInvested },
-      { name: 'Rendimentos', value: Math.max(0, runningBalance - runningInvested) }
+      { name: 'Rendimento', value: Math.max(0, (currentInv?.yieldValue || 0)) },
+      { name: 'Proventos', value: (currentInv?.dividendValue || 0) }
     ].filter(item => item.value > 0);
 
     return { timeline, pieData, composition, invName: inv.name };
@@ -136,18 +153,22 @@ export default function InvestmentsView() {
   return (
     <div className="space-y-6">
       {/* Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800">
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">Patrimônio (Neste mês)</p>
-          <p className="text-3xl font-bold text-zinc-900 dark:text-zinc-100 mt-1">{formatCurrency(totalCurrent)}</p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">Patrimônio</p>
+          <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mt-1">{formatCurrency(totalCurrent)}</p>
         </div>
         <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800">
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">Total Investido (Neste mês)</p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">Total Investido</p>
           <p className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mt-1">{formatCurrency(totalInvested)}</p>
         </div>
         <div className={`p-6 rounded-2xl shadow-sm border ${totalYield >= 0 ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-rose-50 border-rose-200 dark:bg-rose-900/20 dark:border-rose-900/30 text-rose-700 dark:text-rose-400'}`}>
           <p className="text-sm font-medium opacity-80">Rendimento Acumulado</p>
           <p className="text-xl font-bold mt-1">{totalYield >= 0 ? '+' : ''}{formatCurrency(totalYield)}</p>
+        </div>
+        <div className="bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-900/30 text-amber-700 dark:text-amber-400 p-6 rounded-2xl shadow-sm border">
+          <p className="text-sm font-medium opacity-80">Total de Proventos</p>
+          <p className="text-xl font-bold mt-1">+{formatCurrency(totalDividends)}</p>
         </div>
       </div>
 
@@ -168,8 +189,9 @@ export default function InvestmentsView() {
             <div className="p-12 text-center text-zinc-500">Nenhum investimento cadastrado ou não há saldo neste mês.</div>
           ) : (
             currentMonthInvestments.map(inv => {
-              const yieldValue = inv.currentBalance - inv.totalInvested;
+              const yieldValue = inv.yieldValue || 0;
               const yieldPercent = inv.totalInvested > 0 ? (yieldValue / inv.totalInvested) * 100 : 0;
+              const dividendValue = inv.dividendValue || 0;
 
               return (
                 <div key={inv.id} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -193,6 +215,14 @@ export default function InvestmentsView() {
                           {yieldValue >= 0 ? '+' : ''}{formatCurrency(yieldValue)} ({yieldPercent.toFixed(2)}%)
                         </span>
                       </div>
+                      {dividendValue > 0 && (
+                        <div>
+                          <span className="text-zinc-500">Proventos: </span>
+                          <span className="font-medium text-amber-600 dark:text-amber-400">
+                            +{formatCurrency(dividendValue)}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -214,12 +244,21 @@ export default function InvestmentsView() {
                         <ArrowDownCircle className="w-4 h-4" /> Resgate
                       </button>
                       {inv.type === 'ACAO' && (
-                        <button 
-                          onClick={() => { setTxType('DIVIDEND'); setTxModalInvestmentId(inv.id); }}
-                          className="flex items-center gap-1 px-3 py-1.5 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/40 rounded-lg text-sm font-medium transition-colors"
-                        >
-                          <Plus className="w-4 h-4" /> Provento
-                        </button>
+                        <>
+                          <button 
+                            onClick={() => { setTxType('DIVIDEND'); setTxModalInvestmentId(inv.id); }}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/40 rounded-lg text-sm font-medium transition-colors"
+                          >
+                            <Plus className="w-4 h-4" /> Provento
+                          </button>
+                          <button 
+                            onClick={() => setDividendListInvestmentId(inv.id)}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 rounded-lg text-sm font-medium transition-colors"
+                            title="Listar Proventos"
+                          >
+                            Extrato
+                          </button>
+                        </>
                       )}
                       <button 
                         onClick={() => { setTxType('YIELD'); setTxModalInvestmentId(inv.id); }}
@@ -438,6 +477,116 @@ export default function InvestmentsView() {
           </div>
         </div>
       )}
+
+      {dividendListInvestmentId && (
+        <DividendListModal 
+          investmentId={dividendListInvestmentId}
+          onClose={() => setDividendListInvestmentId(null)}
+          transactions={investmentTransactions}
+          onUpdate={updateInvestmentTransaction}
+          onDelete={deleteInvestmentTransaction}
+          formatCurrency={formatCurrency}
+        />
+      )}
+    </div>
+  );
+}
+
+function DividendListModal({ 
+  investmentId, 
+  onClose, 
+  transactions, 
+  onUpdate, 
+  onDelete,
+  formatCurrency 
+}: { 
+  investmentId: string, 
+  onClose: () => void, 
+  transactions: any[], 
+  onUpdate: (id: string, amount: number, date: string) => Promise<void>,
+  onDelete: (id: string) => Promise<void>,
+  formatCurrency: (v: number) => string
+}) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editAmount, setEditAmount] = useState('');
+  const [editDate, setEditDate] = useState('');
+
+  const dividendTxs = transactions
+    .filter(t => t.investmentId === investmentId && t.type === 'DIVIDEND')
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  const startEdit = (tx: any) => {
+    setEditingId(tx.id);
+    setEditAmount(tx.amount.toString());
+    setEditDate(tx.date);
+  };
+
+  const handleSave = async () => {
+    if (editingId) {
+      await onUpdate(editingId, parseFloat(editAmount), editDate);
+      setEditingId(null);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-2xl shadow-xl overflow-hidden flex flex-col max-h-[80vh]">
+        <div className="flex justify-between items-center p-6 border-b border-zinc-100 dark:border-zinc-800">
+          <h2 className="text-xl font-bold">Histórico de Proventos</h2>
+          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        
+        <div className="overflow-y-auto p-6">
+          {dividendTxs.length === 0 ? (
+            <p className="text-center text-zinc-500 py-8">Nenhum provento registrado.</p>
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr className="text-left text-xs font-bold text-zinc-500 uppercase tracking-wider border-b border-zinc-100 dark:border-zinc-800">
+                  <th className="pb-3">Data</th>
+                  <th className="pb-3">Valor</th>
+                  <th className="pb-3 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                {dividendTxs.map(tx => (
+                  <tr key={tx.id} className="text-sm">
+                    <td className="py-4">
+                      {editingId === tx.id ? (
+                        <input type="date" value={editDate} onChange={e => setEditDate(e.target.value)} className="px-2 py-1 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded" />
+                      ) : (
+                        format(parseISO(tx.date), 'dd/MM/yyyy')
+                      )}
+                    </td>
+                    <td className="py-4 font-medium text-emerald-600 dark:text-emerald-400">
+                      {editingId === tx.id ? (
+                        <input type="number" step="0.01" value={editAmount} onChange={e => setEditAmount(e.target.value)} className="w-24 px-2 py-1 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded" />
+                      ) : (
+                        formatCurrency(tx.amount)
+                      )}
+                    </td>
+                    <td className="py-4 text-right">
+                      {editingId === tx.id ? (
+                        <div className="flex justify-end gap-2">
+                          <button onClick={handleSave} className="text-emerald-600 hover:text-emerald-700 font-bold">Salvar</button>
+                          <button onClick={() => setEditingId(null)} className="text-zinc-500 hover:text-zinc-400">Cancelar</button>
+                        </div>
+                      ) : (
+                        <div className="flex justify-end gap-3">
+                          <button onClick={() => startEdit(tx)} className="text-indigo-600 hover:text-indigo-700">Editar</button>
+                          <button onClick={() => onDelete(tx.id)} className="text-rose-600 hover:text-rose-700">Excluir</button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -30,6 +30,8 @@ interface FinanceContextProps {
   copyToCurrentMonth: (transaction: Transaction) => Promise<void>;
   addInvestment: (investment: Omit<Investment, 'id' | 'userId' | 'currentBalance' | 'totalInvested'> & { currentBalance?: number, totalInvested?: number }) => Promise<void>;
   addInvestmentTransaction: (investmentId: string, payload: { type: string; amount: number; date: string; addToMainBalance?: boolean }) => Promise<void>;
+  updateInvestmentTransaction: (id: string, payload: { amount: number; date: string }) => Promise<void>;
+  deleteInvestmentTransaction: (id: string) => Promise<void>;
   deleteInvestment: (id: string) => Promise<void>;
 }
 
@@ -112,6 +114,32 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const updateInvestmentTransaction = async (id: string, payload: { amount: number; date: string }) => {
+    const res = await fetch(`/api/investments/transactions/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      const invRes = await fetch('/api/investments');
+      const invData = await invRes.json();
+      setInvestments(invData.investments || []);
+      setInvestmentTransactions(invData.transactions || []);
+    }
+  };
+
+  const deleteInvestmentTransaction = async (id: string) => {
+    const res = await fetch(`/api/investments/transactions/${id}`, {
+      method: 'DELETE'
+    });
+    if (res.ok) {
+      const invRes = await fetch('/api/investments');
+      const invData = await invRes.json();
+      setInvestments(invData.investments || []);
+      setInvestmentTransactions(invData.transactions || []);
+    }
+  };
+
   const deleteInvestment = async (id: string) => {
     const res = await fetch(`/api/investments/${id}`, { method: 'DELETE' });
     if (res.ok) {
@@ -132,6 +160,8 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
       
       let viewedBalance = 0;
       let viewedInvested = 0;
+      let viewedYield = 0;
+      let viewedDividends = 0;
       
       // Reconstruct the balance chronologically
       txs.sort((a, b) => a.date.localeCompare(b.date)).forEach(tx => {
@@ -141,8 +171,12 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
         } else if (tx.type === 'WITHDRAWAL') {
           viewedBalance = Math.max(0, viewedBalance - tx.amount);
           viewedInvested = Math.max(0, viewedInvested - tx.amount);
-        } else if (tx.type === 'YIELD' || tx.type === 'DIVIDEND') {
+        } else if (tx.type === 'YIELD') {
           viewedBalance += tx.amount;
+          viewedYield += tx.amount;
+        } else if (tx.type === 'DIVIDEND') {
+          viewedBalance += tx.amount;
+          viewedDividends += tx.amount;
         }
       });
 
@@ -150,6 +184,8 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
         ...inv,
         currentBalance: viewedBalance,
         totalInvested: viewedInvested,
+        yieldValue: viewedYield,
+        dividendValue: viewedDividends,
       };
     });
   }, [investments, investmentTransactions, currentDate]);
@@ -388,6 +424,8 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
       currentMonthInvestments,
       addInvestment,
       addInvestmentTransaction,
+      updateInvestmentTransaction,
+      deleteInvestmentTransaction,
       deleteInvestment
     }}>
       {children}

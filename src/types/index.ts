@@ -34,6 +34,8 @@ export interface Investment {
   type: InvestmentType;
   currentBalance: number;
   totalInvested: number;
+  yieldValue?: number;
+  dividendValue?: number;
 }
 
 export interface InvestmentTransaction {
