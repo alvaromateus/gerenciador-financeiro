@@ -503,7 +503,7 @@ function DividendListModal({
   investmentId: string, 
   onClose: () => void, 
   transactions: any[], 
-  onUpdate: (id: string, amount: number, date: string) => Promise<void>,
+  onUpdate: (id: string, payload: { amount: number; date: string }) => Promise<void>,
   onDelete: (id: string) => Promise<void>,
   formatCurrency: (v: number) => string
 }) {
@@ -523,7 +523,7 @@ function DividendListModal({
 
   const handleSave = async () => {
     if (editingId) {
-      await onUpdate(editingId, parseFloat(editAmount), editDate);
+      await onUpdate(editingId, { amount: parseFloat(editAmount), date: editDate });
       setEditingId(null);
     }
   };
