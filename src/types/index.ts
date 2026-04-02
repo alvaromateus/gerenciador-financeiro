@@ -17,8 +17,8 @@ export type Category =
 export type TransactionType = 'one-time' | 'recurring' | 'fixed';
 export type EntryType = 'income' | 'expense';
 
-export type InvestmentType = 'RENDA_FIXA' | 'RENDA_VARIAVEL' | 'CRIPTO' | 'OUTROS';
-export type InvestmentTxType = 'DEPOSIT' | 'WITHDRAWAL' | 'YIELD';
+export type InvestmentType = 'RENDA_FIXA' | 'RENDA_VARIAVEL' | 'ACAO' | 'CRIPTO' | 'OUTROS';
+export type InvestmentTxType = 'DEPOSIT' | 'WITHDRAWAL' | 'YIELD' | 'DIVIDEND';
 
 export interface User {
   id: string;

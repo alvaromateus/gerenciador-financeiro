@@ -24,9 +24,10 @@ export default function InvestmentsView() {
   const [initialBalance, setInitialBalance] = useState('');
 
   // Transaction Modal State
-  const [txType, setTxType] = useState<'DEPOSIT' | 'WITHDRAWAL' | 'YIELD'>('DEPOSIT');
+  const [txType, setTxType] = useState<'DEPOSIT' | 'WITHDRAWAL' | 'YIELD' | 'DIVIDEND'>('DEPOSIT');
   const [txAmount, setTxAmount] = useState('');
   const [txDate, setTxDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [addToMainBalance, setAddToMainBalance] = useState(false);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -59,10 +60,12 @@ export default function InvestmentsView() {
       type: txType,
       amount: parseFloat(txAmount),
       date: txDate,
+      addToMainBalance: txType === 'DIVIDEND' ? addToMainBalance : undefined
     });
 
     setTxModalInvestmentId(null);
     setTxAmount('');
+    setAddToMainBalance(false);
   };
 
   const totalCurrent = currentMonthInvestments.reduce((acc, curr) => acc + curr.currentBalance, 0);
@@ -210,6 +213,14 @@ export default function InvestmentsView() {
                       >
                         <ArrowDownCircle className="w-4 h-4" /> Resgate
                       </button>
+                      {inv.type === 'ACAO' && (
+                        <button 
+                          onClick={() => { setTxType('DIVIDEND'); setTxModalInvestmentId(inv.id); }}
+                          className="flex items-center gap-1 px-3 py-1.5 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/20 dark:text-amber-400 dark:hover:bg-amber-900/40 rounded-lg text-sm font-medium transition-colors"
+                        >
+                          <Plus className="w-4 h-4" /> Provento
+                        </button>
+                      )}
                       <button 
                         onClick={() => { setTxType('YIELD'); setTxModalInvestmentId(inv.id); }}
                         className="flex items-center gap-1 px-3 py-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:text-indigo-400 dark:hover:bg-indigo-900/40 rounded-lg text-sm font-medium transition-colors"
@@ -264,6 +275,7 @@ export default function InvestmentsView() {
                 <select value={type} onChange={e => setType(e.target.value as InvestmentType)} className="w-full px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
                   <option value="RENDA_FIXA">Renda Fixa</option>
                   <option value="RENDA_VARIAVEL">Renda Variável</option>
+                  <option value="ACAO">Ações</option>
                   <option value="CRIPTO">Criptomoedas</option>
                   <option value="OUTROS">Outros</option>
                 </select>
@@ -286,7 +298,7 @@ export default function InvestmentsView() {
           <div className="bg-white dark:bg-zinc-900 rounded-2xl w-full max-w-md shadow-xl overflow-hidden">
             <div className="flex justify-between items-center p-6 border-b border-zinc-100 dark:border-zinc-800">
               <h2 className="text-xl font-bold">
-                {txType === 'DEPOSIT' ? 'Novo Aporte' : txType === 'WITHDRAWAL' ? 'Resgate' : 'Atualizar Saldo (Rendimento)'}
+                {txType === 'DEPOSIT' ? 'Novo Aporte' : txType === 'WITHDRAWAL' ? 'Resgate' : txType === 'DIVIDEND' ? 'Novo Provento' : 'Atualizar Saldo (Rendimento)'}
               </h2>
               <button onClick={() => setTxModalInvestmentId(null)} className="text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300">
                 <X className="w-5 h-5" />
@@ -304,7 +316,23 @@ export default function InvestmentsView() {
                 <label className="block text-sm font-medium mb-1">Data</label>
                 <input required type="date" value={txDate} onChange={e => setTxDate(e.target.value)} className="w-full px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none" />
               </div>
-              <button type="submit" className={`w-full py-3 text-white rounded-lg font-medium transition-colors mt-4 ${txType === 'DEPOSIT' ? 'bg-emerald-600 hover:bg-emerald-700' : txType === 'WITHDRAWAL' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
+
+              {txType === 'DIVIDEND' && (
+                <div className="flex items-center gap-2 py-2">
+                  <input 
+                    type="checkbox" 
+                    id="addToMainBalance" 
+                    checked={addToMainBalance} 
+                    onChange={e => setAddToMainBalance(e.target.checked)}
+                    className="w-4 h-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <label htmlFor="addToMainBalance" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    Adicionar como receita nas Contas mensais
+                  </label>
+                </div>
+              )}
+
+              <button type="submit" className={`w-full py-3 text-white rounded-lg font-medium transition-colors mt-4 ${txType === 'DEPOSIT' ? 'bg-emerald-600 hover:bg-emerald-700' : txType === 'WITHDRAWAL' ? 'bg-rose-600 hover:bg-rose-700' : txType === 'DIVIDEND' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
                 Confirmar
               </button>
             </form>

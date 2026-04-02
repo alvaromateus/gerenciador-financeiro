@@ -10,7 +10,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params;
 
   try {
-    const { type, amount, date } = await req.json();
+    const { type, amount, date, addToMainBalance } = await req.json();
     await connectToDatabase();
 
     const investment = await InvestmentModel.findOne({ id, userId: user.userId });
@@ -56,6 +56,24 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         amount: difference,
         date,
       });
+    } else if (type === 'DIVIDEND') {
+      newCurrentBalance += numAmount;
+      // totalInvested remains the same for dividends
+
+      if (addToMainBalance) {
+        // Create income in main finance area
+        await TransactionModel.create({
+          id: uuidv4(),
+          userId: user.userId,
+          description: `Provento: ${investment.name}`,
+          amount: numAmount,
+          entryType: 'income',
+          type: 'one-time',
+          category: 'Rendimentos',
+          paid: true,
+          dueDate: date,
+        });
+      }
     }
 
     if (type !== 'YIELD') {

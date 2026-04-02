@@ -29,7 +29,7 @@ interface FinanceContextProps {
   importData: (jsonData: any) => Promise<void>;
   copyToCurrentMonth: (transaction: Transaction) => Promise<void>;
   addInvestment: (investment: Omit<Investment, 'id' | 'userId' | 'currentBalance' | 'totalInvested'> & { currentBalance?: number, totalInvested?: number }) => Promise<void>;
-  addInvestmentTransaction: (investmentId: string, payload: { type: string; amount: number; date: string }) => Promise<void>;
+  addInvestmentTransaction: (investmentId: string, payload: { type: string; amount: number; date: string; addToMainBalance?: boolean }) => Promise<void>;
   deleteInvestment: (id: string) => Promise<void>;
 }
 
@@ -87,7 +87,7 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const addInvestmentTransaction = async (investmentId: string, payload: { type: string; amount: number; date: string }) => {
+  const addInvestmentTransaction = async (investmentId: string, payload: { type: string; amount: number; date: string; addToMainBalance?: boolean }) => {
     const res = await fetch(`/api/investments/${investmentId}/transactions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -102,8 +102,8 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
       const txData = await txRes.json();
       setInvestmentTransactions(txData.transactions || []);
       
-      // If it was a withdrawal, it auto-created an income in the main account, so fetch main transactions again
-      if (payload.type === 'WITHDRAWAL') {
+      // If it was a withdrawal or a dividend that was added to main balance, it auto-created an income in the main account, so fetch main transactions again
+      if (payload.type === 'WITHDRAWAL' || (payload.type === 'DIVIDEND' && payload.addToMainBalance)) {
         const mainRes = await fetch('/api/transactions');
         const mainData = await mainRes.json();
         setTransactions(mainData.transactions || []);
@@ -141,7 +141,7 @@ export const FinanceProvider = ({ children }: { children: ReactNode }) => {
         } else if (tx.type === 'WITHDRAWAL') {
           viewedBalance = Math.max(0, viewedBalance - tx.amount);
           viewedInvested = Math.max(0, viewedInvested - tx.amount);
-        } else if (tx.type === 'YIELD') {
+        } else if (tx.type === 'YIELD' || tx.type === 'DIVIDEND') {
           viewedBalance += tx.amount;
         }
       });
