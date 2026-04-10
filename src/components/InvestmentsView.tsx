@@ -31,6 +31,10 @@ export default function InvestmentsView() {
   const [editAmount, setEditAmount] = useState('');
   const [editDate, setEditDate] = useState('');
   
+  // Filters State
+  const [filterType, setFilterType] = useState<InvestmentType | 'ALL'>('ALL');
+  const [hideZeroBalance, setHideZeroBalance] = useState(false);
+  
   // Add Form State
   const [name, setName] = useState('');
   const [institution, setInstitution] = useState('');
@@ -82,10 +86,18 @@ export default function InvestmentsView() {
     setAddToMainBalance(false);
   };
 
-  const totalCurrent = currentMonthInvestments.reduce((acc, curr) => acc + curr.currentBalance, 0);
-  const totalInvested = currentMonthInvestments.reduce((acc, curr) => acc + curr.totalInvested, 0);
-  const totalYield = currentMonthInvestments.reduce((acc, curr) => acc + (curr.yieldValue || 0), 0);
-  const totalDividends = currentMonthInvestments.reduce((acc, curr) => acc + (curr.dividendValue || 0), 0);
+  const filteredInvestments = useMemo(() => {
+    return currentMonthInvestments.filter(inv => {
+      const matchesType = filterType === 'ALL' || inv.type === filterType;
+      const matchesZero = hideZeroBalance ? inv.currentBalance > 0 : true;
+      return matchesType && matchesZero;
+    });
+  }, [currentMonthInvestments, filterType, hideZeroBalance]);
+
+  const totalCurrent = filteredInvestments.reduce((acc, curr) => acc + curr.currentBalance, 0);
+  const totalInvested = filteredInvestments.reduce((acc, curr) => acc + curr.totalInvested, 0);
+  const totalYield = filteredInvestments.reduce((acc, curr) => acc + (curr.yieldValue || 0), 0);
+  const totalDividends = filteredInvestments.reduce((acc, curr) => acc + (curr.dividendValue || 0), 0);
 
   const getHistoryData = (invId: string) => {
     const inv = investments.find(i => i.id === invId);
@@ -174,21 +186,77 @@ export default function InvestmentsView() {
 
       {/* List */}
       <div className="bg-white dark:bg-zinc-900 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 overflow-hidden">
-        <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
-          <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">Investimentos no período</h2>
-          <button 
-            onClick={() => setIsAddFormOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
-          >
-            <Plus className="w-4 h-4" /> Novo
-          </button>
+        <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex flex-col gap-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">Investimentos no período</h2>
+            <button 
+              onClick={() => setIsAddFormOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" /> Novo
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4 py-2 border-t border-zinc-100 dark:border-zinc-800 mt-2 pt-4">
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setFilterType('ALL')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filterType === 'ALL' ? 'bg-indigo-600 text-white' : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 hover:bg-zinc-200'}`}
+              >
+                Todos
+              </button>
+              <button
+                onClick={() => setFilterType('ACAO')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filterType === 'ACAO' ? 'bg-indigo-600 text-white' : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 hover:bg-zinc-200'}`}
+              >
+                Ações
+              </button>
+              <button
+                onClick={() => setFilterType('RENDA_FIXA')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filterType === 'RENDA_FIXA' ? 'bg-indigo-600 text-white' : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 hover:bg-zinc-200'}`}
+              >
+                Renda Fixa
+              </button>
+              <button
+                onClick={() => setFilterType('RENDA_VARIAVEL')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filterType === 'RENDA_VARIAVEL' ? 'bg-indigo-600 text-white' : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 hover:bg-zinc-200'}`}
+              >
+                Renda Variável
+              </button>
+              <button
+                onClick={() => setFilterType('CRIPTO')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filterType === 'CRIPTO' ? 'bg-indigo-600 text-white' : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 hover:bg-zinc-200'}`}
+              >
+                Cripto
+              </button>
+              <button
+                onClick={() => setFilterType('OUTROS')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${filterType === 'OUTROS' ? 'bg-indigo-600 text-white' : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 hover:bg-zinc-200'}`}
+              >
+                Outros
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 ml-auto">
+              <input 
+                type="checkbox" 
+                id="hideZeroBalance" 
+                checked={hideZeroBalance} 
+                onChange={e => setHideZeroBalance(e.target.checked)}
+                className="w-4 h-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <label htmlFor="hideZeroBalance" className="text-sm font-medium text-zinc-600 dark:text-zinc-400 cursor-pointer">
+                Ocultar zerados
+              </label>
+            </div>
+          </div>
         </div>
 
         <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
-          {currentMonthInvestments.length === 0 ? (
-            <div className="p-12 text-center text-zinc-500">Nenhum investimento cadastrado ou não há saldo neste mês.</div>
+          {filteredInvestments.length === 0 ? (
+            <div className="p-12 text-center text-zinc-500">Nenhum investimento encontrado com os filtros selecionados.</div>
           ) : (
-            currentMonthInvestments.map(inv => {
+            filteredInvestments.map(inv => {
               const yieldValue = inv.yieldValue || 0;
               const yieldPercent = inv.totalInvested > 0 ? (yieldValue / inv.totalInvested) * 100 : 0;
               const dividendValue = inv.dividendValue || 0;
